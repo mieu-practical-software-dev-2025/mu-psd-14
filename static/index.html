@@ -12,7 +12,7 @@
 <body>
 
     <div id="app" class="container">
-        <h2 class="mb-4">サンプルアプリ</h2>
+        <h2 class="mb-4">AIを使って暗号化＆復号してみましょう！</h2>
 
         <div class="mb-3">
             <label for="inputText" class="form-label">テキストを入力してください:</label>
@@ -20,13 +20,24 @@
         </div>
 
         <div class="mb-3">
-            <button @click="execute" class="btn btn-primary">実行</button>
-            <button @click="execute_kansai" class="btn btn-success ms-2">暗号化</button>
+            <button @click="execute_kagi" class="btn btn-primary">共通鍵暗号化</button>
+            <button @click="execute_rsa" class="btn btn-success ms-2">RSA暗号化</button>
         </div>
         
-        <h3>結果:</h3>
+        <h3>暗号結果:</h3>
         <div class="result-area p-3 border rounded" :class="{ 'alert alert-info': resultText && !resultText.startsWith('エラー:'), 'alert alert-danger': resultText.startsWith('エラー:') }">
             <pre style="white-space: pre-wrap;">{{ resultText }}</pre>
+        </div>
+
+        <div class="mb-3 mt-3">
+        <button @click="execute_decrypt" class="btn btn-warning">復号</button>
+        </div>
+
+        <h3>復号結果:</h3>
+        <div class="result-area p-3 border rounded"
+         :class="{ 'alert alert-info': decryptedText && !decryptedText.startsWith('エラー:'), 'alert alert-danger': decryptedText.startsWith('エラー:') }"
+         style="max-height:200px; overflow-y:auto;">
+        <pre style="white-space: pre-wrap;">{{ decryptedText }}</pre>
         </div>
     </div>
 
@@ -34,10 +45,11 @@
         const { createApp } = Vue;
 
         createApp({
-            data() {
+            data()   {
                 return {
                     inputText: '',
-                    resultText: 'ここに結果が表示されます。'
+                    resultText: 'ここに結果が表示されます。',
+                    decryptedText: 'ここに復号結果が表示されます。'
                 };
             },
             methods: {
@@ -66,12 +78,38 @@
                         this.resultText = `エラー: ${error.message}`;
                     }
                 },
-                execute() {
-                    this.sendRequest();
+                execute_kagi() {
+                    this.sendRequest("共通鍵暗号方式で暗号化してください。鍵はランダムに生成してください。暗号結果と鍵のみ表示してください。");
                 },
-                execute_kansai() {
-                    this.sendRequest("入力されたテキストに対して、ランダムな鍵を生成し、暗号化してください。");
+                execute_rsa() {
+                    this.sendRequest("RSA暗号で暗号化してください。鍵はランダムに生成してください。暗号結果と鍵のみ表示してください。");
+                },
+        async execute_decrypt() {
+            if (!this.resultText || this.resultText.startsWith('エラー:')) {
+                this.decryptedText = "エラー: 暗号化されたテキストが存在しません。";
+                return;
+            }
+            this.decryptedText = '復号中...';
+            await this.sendRequestDecrypt(this.resultText, "暗号文を復号してください。復号結果と使用された鍵のみ表示してください");
+        },
+
+        async sendRequestDecrypt(encryptedText, context) {
+            try {
+                const response = await fetch('/decrypt_api', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ text: encryptedText, context })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    this.decryptedText = data.processed_text;
+                } else {
+                    this.decryptedText = `エラー: ${data.error || '復号に失敗しました。'}`;
                 }
+            } catch (error) {
+                this.decryptedText = `エラー: ${error.message}`;
+            }
+        }
             }
         }).mount('#app');
     </script>
