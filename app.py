@@ -98,6 +98,29 @@ def send_api():
         # クライアントには具体的なエラー詳細を返しすぎないように注意
         return jsonify({"error": f"AIサービスとの通信中にエラーが発生しました。"}), 500
 
+@app.route('/decrypt_api', methods=['POST'])
+def decrypt_api():
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return jsonify({"error":"Missing 'text'"}),400
+
+    encrypted_text = data['text']
+
+    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY,
+                    default_headers={"HTTP-Referer": SITE_URL, "X-Title": APP_NAME})
+    try:
+        completion = client.chat.completions.create(
+            model="google/gemma-3-27b-it:free",
+            messages=[
+                {"role":"system","content":"与えられた暗号文を復号してください。デモ用AI暗号です。"},
+                {"role":"user","content":encrypted_text}
+            ]
+        )
+        processed_text = completion.choices[0].message.content
+        return jsonify({"processed_text": processed_text})
+    except Exception as e:
+        return jsonify({"error":"復号中にエラーが発生しました。"}),500
+    
 # スクリプトが直接実行された場合にのみ開発サーバーを起動
 if __name__ == '__main__':
     if not OPENROUTER_API_KEY:
