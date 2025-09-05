@@ -65,7 +65,7 @@ def send_api():
         return jsonify({"error": "Input text cannot be empty"}), 400
     
     # contextがあればsystemプロンプトに設定、なければデフォルト値
-    system_prompt = "140字以内で回答してください。" # デフォルトのシステムプロンプト
+    system_prompt = "400字以内で回答してください。" # デフォルトのシステムプロンプト
     if 'context' in data and data['context'] and data['context'].strip():
         system_prompt = data['context'].strip()
         app.logger.info(f"Using custom system prompt from context: {system_prompt}")
@@ -78,49 +78,31 @@ def send_api():
         # 例: "mistralai/mistral-7b-instruct", "google/gemini-pro", "openai/gpt-3.5-turbo"
         # 詳細はOpenRouterのドキュメントを参照してください。
         chat_completion = client.chat.completions.create(
-            messages=[ # type: ignore
+            messages=[# type: ignore
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": received_text}
-            ], # type: ignore
-            model="google/gemma-3-27b-it:free", 
+            ],# type: ignore
+            model="google/gemma-3-27b-it:free",
         )
-        
-        # APIからのレスポンスを取得
-        if chat_completion.choices and chat_completion.choices[0].message:
-            processed_text = chat_completion.choices[0].message.content
-        else:
-            processed_text = "AIから有効な応答がありませんでした。"
-            
-        return jsonify({"message": "AIによってデータが処理されました。", "processed_text": processed_text})
+
+        processed_text = chat_completion.choices[0].message.content if chat_completion.choices else "AIから有効な応答がありませんでした。"
+        # 参考リンクを作成（Wikipedia + YouTube）
+        links = [
+            {"title": f"Wikipedia: {received_text}", "url": f"https://ja.wikipedia.org/wiki/{received_text}"},
+            {"title": f"YouTube検索: {received_text}", "url": f"https://www.youtube.com/results?search_query={received_text}+解説"}
+        ]
+
+        return jsonify({
+            "message": "AIによってデータが処理されました。",
+            "processed_text": processed_text,
+            "links": links,
+        })
 
     except Exception as e:
         app.logger.error(f"OpenRouter API call failed: {e}")
         # クライアントには具体的なエラー詳細を返しすぎないように注意
         return jsonify({"error": f"AIサービスとの通信中にエラーが発生しました。"}), 500
 
-@app.route('/decrypt_api', methods=['POST'])
-def decrypt_api():
-    data = request.get_json()
-    if not data or 'text' not in data:
-        return jsonify({"error":"Missing 'text'"}),400
-
-    encrypted_text = data['text']
-
-    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY,
-                    default_headers={"HTTP-Referer": SITE_URL, "X-Title": APP_NAME})
-    try:
-        completion = client.chat.completions.create(
-            model="google/gemma-3-27b-it:free",
-            messages=[
-                {"role":"system","content":"与えられた暗号文を復号してください。デモ用AI暗号です。"},
-                {"role":"user","content":encrypted_text}
-            ]
-        )
-        processed_text = completion.choices[0].message.content
-        return jsonify({"processed_text": processed_text})
-    except Exception as e:
-        return jsonify({"error":"復号中にエラーが発生しました。"}),500
-    
 # スクリプトが直接実行された場合にのみ開発サーバーを起動
 if __name__ == '__main__':
     if not OPENROUTER_API_KEY:

@@ -8,53 +8,68 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- BootStrapをCDNから読み込み -->
 	<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css">
+    <!-- Bootstrap IconsをCDNから読み込み -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body>
 
     <div id="app" class="container">
-        <h2 class="mb-4">AIを使って暗号化＆復号してみましょう！</h2>
+        <h2 class="mb-4">専門用語解説</h2>
 
         <div class="mb-3">
-            <label for="inputText" class="form-label">テキストを入力してください:</label>
+            <label for="inputText" class="form-label">調べたい専門用語（単語）を入力してください:</label>
             <textarea id="inputText" class="form-control" rows="5" v-model="inputText" placeholder="ここにテキストを入力..."></textarea>
         </div>
 
         <div class="mb-3">
-            <button @click="execute_kagi" class="btn btn-primary">共通鍵暗号化</button>
-            <button @click="execute_rsa" class="btn btn-success ms-2">RSA暗号化</button>
+            <button @click="kodomo" class="btn btn-primary"><i class="bi bi-person-badge"></i>子供向け</button>
+            <button @click="otona" class="btn btn-success ms-2"><i class="bi bi-person-workspace"></i>大人向け</button>
+            <button @click="speakResult" class="btn btn-warning ms-2"><i class="bi bi-volume-up-fill"></i>読み上げ</button>
+            <button @click="kanren" class="btn btn-secondary ms-2"></i>関連語句</button>
         </div>
         
-        <h3>暗号結果:</h3>
+        <h3>解説:</h3>
         <div class="result-area p-3 border rounded" :class="{ 'alert alert-info': resultText && !resultText.startsWith('エラー:'), 'alert alert-danger': resultText.startsWith('エラー:') }">
             <pre style="white-space: pre-wrap;">{{ resultText }}</pre>
         </div>
 
-        <div class="mb-3 mt-3">
-        <button @click="execute_decrypt" class="btn btn-warning">復号</button>
+        <h3>参考リンク:</h3>
+        <div class="links-area p-3 border rounded">
+        <ul v-if="links.length > 0" class="list-unstyled">
+            <li v-for="(link, index) in links" :key="index" class="mb-2">
+                <i :class="link.iconClass"></i>
+                <a :href="link.url" target="_blank" rel="noopener noreferrer" class="ms-1">
+                    {{ link.title }}
+                </a>
+            </li>
+        </ul>
+        <p v-else>リンクはありません。</p>
         </div>
 
-        <h3>復号結果:</h3>
-        <div class="result-area p-3 border rounded"
-         :class="{ 'alert alert-info': decryptedText && !decryptedText.startsWith('エラー:'), 'alert alert-danger': decryptedText.startsWith('エラー:') }"
-         style="max-height:200px; overflow-y:auto;">
-        <pre style="white-space: pre-wrap;">{{ decryptedText }}</pre>
+        <h3>関連する語句:</h3>
+        <div class="result-area p-3 border rounded" :class="{ 'alert alert-info': resultText && !resultText.startsWith('エラー:'), 'alert alert-danger': resultText.startsWith('エラー:') }">
+            <pre style="white-space: pre-wrap;">{{ relatedWords }}</pre>
         </div>
+
     </div>
 
     <script>
         const { createApp } = Vue;
 
         createApp({
-            data()   {
+            data() {
                 return {
                     inputText: '',
                     resultText: 'ここに結果が表示されます。',
-                    decryptedText: 'ここに復号結果が表示されます。'
+                    relatedWords: '関連する語句が表示されます。',
+                    links: []
                 };
             },
             methods: {
-                async sendRequest(context = null) {
-                    this.resultText = '処理中...';
+                async sendRequest(context = null, isRelated = false) {
+                    if (!isRelated) this.resultText = '処理中...';
+                    else this.relatedWords = '処理中...';
+                    this.links = [];
                     try {
                         const payload = { text: this.inputText };
                         if (context) {
@@ -70,46 +85,49 @@
                         });
                         const data = await response.json();
                         if (response.ok) {
+                            if (!isRelated) {
                             this.resultText = data.processed_text;
+                            // アイコンを追加
+                            this.links = (data.links || []).map(link => {
+                        if (link.url.includes("wikipedia.org")) {
+                            return { ...link, iconClass: "bi bi-journal-text text-primary" };
+                        } else if (link.url.includes("youtube.com")) {
+                            return { ...link, iconClass: "bi bi-youtube text-danger" };
                         } else {
-                            this.resultText = `エラー: ${data.error || '不明なエラーが発生しました。'}`;
+                            return { ...link, iconClass: "bi bi-link-45deg" };
+                        }
+                        });
+                        } else {
+                            this.relatedWords = data.processed_text;
+                        }
+                        } else {
+                            if (!isRelated) this.resultText = `エラー: ${data.error || '不明なエラーが発生しました。'}`;
+                            else this.relatedWords = `エラー: ${data.error || '不明なエラーが発生しました。'}`;
                         }
                     } catch (error) {
-                        this.resultText = `エラー: ${error.message}`;
+                        if (!isRelated) this.resultText = `エラー: ${error.message}`;
+                        else this.relatedWords = `エラー: ${error.message}`;
                     }
                 },
-                execute_kagi() {
-                    this.sendRequest("共通鍵暗号方式で暗号化してください。鍵はランダムに生成してください。暗号結果と鍵のみ表示してください。");
+                kodomo() {
+                    this.sendRequest("ユーザーからの入力に対して、必ず子供（中学生以下）にもわかるように、優しく、４００字程度で解説してください。");
                 },
-                execute_rsa() {
-                    this.sendRequest("RSA暗号で暗号化してください。鍵はランダムに生成してください。暗号結果と鍵のみ表示してください。");
+                otona() {
+                    this.sendRequest("ユーザーからの入力に対して、必ず高校生以上の年齢の人になら誰にでも理解ができるように、４００字程度で解説してください。");
                 },
-        async execute_decrypt() {
-            if (!this.resultText || this.resultText.startsWith('エラー:')) {
-                this.decryptedText = "エラー: 暗号化されたテキストが存在しません。";
-                return;
-            }
-            this.decryptedText = '復号中...';
-            await this.sendRequestDecrypt(this.resultText, "暗号文を復号してください。復号結果と使用された鍵のみ表示してください");
-        },
-
-        async sendRequestDecrypt(encryptedText, context) {
-            try {
-                const response = await fetch('/decrypt_api', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ text: encryptedText, context })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    this.decryptedText = data.processed_text;
-                } else {
-                    this.decryptedText = `エラー: ${data.error || '復号に失敗しました。'}`;
+                speakResult() {// 音声読み上げ機能の搭載
+                    if (!this.resultText || this.resultText.startsWith('エラー')) return;
+                    // 前の読み上げを止める
+                        window.speechSynthesis.cancel();
+                        const utter = new SpeechSynthesisUtterance(this.resultText);
+                        utter.lang = "ja-JP"; // 言語設定（日本語）
+                        utter.rate = 1.5;     // 読み上げ速度（0.5 ～ 2.0）
+                        utter.pitch = 1.0;    // 声の高さ（0 ～ 2）
+                        window.speechSynthesis.speak(utter);
+                },
+                kanren() {
+                    this.sendRequest("ユーザーからの入力に対して、関連する語句を５つ程度、箇条書きで教えてください。語句のみ表示で、説明は不要です。" , true);
                 }
-            } catch (error) {
-                this.decryptedText = `エラー: ${error.message}`;
-            }
-        }
             }
         }).mount('#app');
     </script>
