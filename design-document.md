@@ -4,7 +4,6 @@
 
 テキスト情報（具体的なものが望ましい）を入力として、LLMを用いて、
 回答（これも具体的に指定）を表示するアプリ。
-testttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
 
 ## 2. 主な機能
 
