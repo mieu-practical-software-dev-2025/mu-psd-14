@@ -25,7 +25,7 @@
             <button @click="kodomo" class="btn btn-primary"><i class="bi bi-person-badge"></i>子供向け</button>
             <button @click="otona" class="btn btn-success ms-2"><i class="bi bi-person-workspace"></i>大人向け</button>
             <button @click="speakResult" class="btn btn-warning ms-2"><i class="bi bi-volume-up-fill"></i>読み上げ</button>
-            <button @click="kanren" class="btn btn-secondary ms-2"></i>関連語句</button>
+            <button @click="kanren" class="btn btn-secondary ms-2">関連語句</button>
         </div>
         
         <h3>解説:</h3>
@@ -47,7 +47,7 @@
         </div>
 
         <h3>関連する語句:</h3>
-        <div class="result-area p-3 border rounded" :class="{ 'alert alert-info': resultText && !resultText.startsWith('エラー:'), 'alert alert-danger': resultText.startsWith('エラー:') }">
+        <div class="result-area p-3 border rounded" :class="{ 'alert alert-info': relatedWords && !relatedWords.startsWith('エラー:'), 'alert alert-danger': relatedWords.startsWith('エラー:') }">
             <pre style="white-space: pre-wrap;">{{ relatedWords }}</pre>
         </div>
 
