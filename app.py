@@ -78,10 +78,9 @@ def send_api():
         # 例: "mistralai/mistral-7b-instruct", "google/gemini-pro", "openai/gpt-3.5-turbo"
         # 詳細はOpenRouterのドキュメントを参照してください。
         chat_completion = client.chat.completions.create(
-            messages=[# type: ignore
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": received_text}
-            ],# type: ignore
+            messages=[
+                {"role": "user", "content": f"{system_prompt}\n\n{received_text}"}
+            ],
             model="google/gemma-3-27b-it:free",
         )
 
